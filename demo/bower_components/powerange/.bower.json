@@ -1,0 +1,34 @@
+{
+  "name": "powerange",
+  "main": "dist/powerange.js",
+  "description": "iOS 7 style range slider",
+  "keywords": [
+    "range",
+    "slider",
+    "iOS7"
+  ],
+  "authors": [
+    "Alexander Petkov <abpetkov@gmail.com> (https://github.com/abpetkov)"
+  ],
+  "homepage": "https://abpetkov.github.io/powerange",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "build",
+    "components",
+    "node_modules",
+    "bower_components",
+    "example",
+    "component.json"
+  ],
+  "_release": "6539b16031",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "6539b16031149bba91f11f1cf80aebbcfb3c869a"
+  },
+  "_source": "git@github.com:zefei/powerange.git",
+  "_target": "master",
+  "_originalSource": "git@github.com:zefei/powerange.git",
+  "_direct": true
+}

@@ -1,0 +1,29 @@
+body {
+  color: #555;
+}
+
+a {
+  outline: none !important;
+}
+
+.footer {
+  margin: 10px 0 30px;
+}
+
+.footer a {
+  color: #888;
+}
+
+.social-buttons {
+  position: absolute;
+  top: 5px;
+  right: 15px;
+}
+
+.slider {
+  padding: 5px 30px 20px;
+}
+
+.slider .range-quantity {
+  background-color: #a9acb1;
+}

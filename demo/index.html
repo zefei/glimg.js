@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+
+<html ng-app="demo" ng-controller="DemoCtrl">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="cache-control" content="no-cache">
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="expires" content="0">
+
+    <title>glimg.js demo</title>
+
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css">
+    <link rel="stylesheet" href="bower_components/powerange/dist/powerange.css">
+    <link rel="stylesheet" href="demo.css">
+
+    <script src="bower_components/angular/angular.js"></script>
+    <script src="bower_components/powerange/dist/powerange.js"></script>
+    <script src="glimg.js"></script>
+    <script src="demo.js"></script>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>
+        glimg.js
+        <a id="download" class="btn btn-primary" download="glimg.jpg">Save</a>
+        <a class="btn btn-primary" ng-click="apply()">Apply</a>
+        <a class="btn btn-primary" ng-click="crop()">Crop</a>
+        <a class="btn btn-primary" ng-click="copy()">Text</a>
+      </h1>
+    </div>
+
+    <hr />
+
+    <div class="container">
+      <canvas id="canvas" style="width: 100%; height: auto"></canvas>
+    </div>
+
+    <div class="container">
+      <p>Blur radius: {{input.blur}}</p>
+      <div class="slider">
+        <slider min="0" max="200" start="0" ng-model="input.blur" decimal="true"
+        ng-change="onBlurChange()"></slider>
+      </div>
+    </div>
+
+    <div class="container">
+      <p>Rotate degree: {{input.rotate}}</p>
+      <div class="slider">
+        <slider min="0" max="360" start="0" ng-model="input.rotate"
+        ng-change="onRotateChange()"></slider>
+      </div>
+    </div>
+
+    <div class="container">
+      <p>Gray: {{input.gray}}</p>
+      <div class="slider">
+        <slider min="0" max="100" start="0" ng-model="input.gray"
+        ng-change="onGrayChange()"></slider>
+      </div>
+    </div>
+
+    <div class="container">
+      <p>Contrast: {{input.contrast}}</p>
+      <div class="slider">
+        <slider min="0" max="100" start="50" ng-model="input.contrast"
+        ng-change="onContrastChange()"></slider>
+      </div>
+    </div>
+
+    <hr />
+
+    <div id="test" class="container">
+    </div>
+
+    <hr />
+
+    <div class="container">
+      <div class="footer text-center text-muted">
+        &copy; 2014
+        <a href="http://zef.io/">Zefei Xuan</a>
+      </div>
+    </div>
+
+    <div class="social-buttons">
+    </div>
+  </body>
+</html>

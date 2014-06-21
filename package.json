@@ -1,0 +1,28 @@
+{
+  "name": "glimg.js",
+  "version": "0.0.1",
+  "description": "WebGL based Image processing library for browsers and WebViews",
+  "main": "glimg.js",
+  "scripts": {
+    "prepare": "npm install -g browserify watchify uglify-js",
+    "build": "browserify src/main.js -s glimg -t brfs | uglifyjs > glimg.min.js",
+    "watch": "watchify src/main.js -v -d -s glimg -t brfs -o glimg.js",
+    "start": "npm run-script watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/zefei/glimg.js.git"
+  },
+  "keywords": [
+    "image processing"
+  ],
+  "author": "Zefei Xuan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zefei/glimg.js/issues"
+  },
+  "homepage": "https://github.com/zefei/glimg.js",
+  "devDependencies": {
+    "brfs": "^1.1.1"
+  }
+}
