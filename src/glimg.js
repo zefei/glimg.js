@@ -24,16 +24,13 @@ function Glimg(canvas) {
 
   var options = {
     preserveDrawingBuffer: true,
-    premultipliedAlpha: false
+    premultipliedAlpha: true
   }
 
   var gl = canvas.getContext('webgl', options) ||
            canvas.getContext('experimental-webgl', options)
 
   if (!gl) throw 'WebGL is not supported'
-
-  gl.enable(gl.BLEND)
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
   this.isGlimg = true
   this.canvas = canvas
@@ -42,34 +39,40 @@ function Glimg(canvas) {
   this._textures = {}
   this._shaders = {}
   var maxUnit = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) - 1
-  this._unit = [maxUnit, maxUnit - 1, maxUnit - 2]
+  this._unit = [maxUnit, maxUnit - 1, maxUnit - 2, maxUnit - 3]
   this._chain = {count: 0}
-  this.setStage(0, null)
+  this.setSource(0)
+  this.setTarget(null)
   this.setZoom(null)
 }
 
-// load(node[, callback])
-// load(url[, callback])
+// load(node[, nocopy])
 // returns this object
 //
-// Load image from a node (canvas, image or video) or from an image url. 
-// Callback is called at the end.
+// Load image from a node (canvas, image or video) as source image. Then copy it 
+// to the target image unless nocopy is set.
 //
-Glimg.prototype.load = function(nodeOrUrl, callback) {
-  if (utils.isString(nodeOrUrl)) {
-    var self = this
-    var image = new Image()
-    image.onload = function() {
-      self.load(image, callback)
-    }
-    image.src = nodeOrUrl
-  } else {
-    this.setSource(this.sourceUnit, nodeOrUrl)
-    .setSize(nodeOrUrl.width, nodeOrUrl.height)
-    .copy()
+Glimg.prototype.load = function(node, nocopy) {
+  node = utils.getNode(node)
+  this.setSource(this.sourceUnit, node).setSize(node.width, node.height)
+  if (!nocopy) this.copy()
+  return this
+}
+
+// loadFromUrl(url[, callback[, nocopy]])
+// returns this object
+//
+// Load remote image as source image. Callback is fired when image is loaded.  
+// Then copy it to the target image unless nocopy is set.
+//
+Glimg.prototype.loadFromUrl = function(url, callback, nocopy) {
+  var self = this
+  var image = new Image()
+  image.onload = function() {
+    self.load(image, nocopy)
     if (callback) callback()
   }
-
+  image.src = url
   return this
 }
 
@@ -124,6 +127,78 @@ Glimg.prototype.zoom = function(zoomLevel) {
   return this
 }
 
+// apply()
+// returns this object
+//
+// Apply rendered result back to source image.
+//
+Glimg.prototype.apply = function() {
+  this.setSource(this.sourceUnit, this)
+  return this
+}
+
+// clear([red, green, blue, alpha])
+// returns this object
+//
+// Clear canvas with specified color, default (0, 0, 0, 0).
+//
+Glimg.prototype.clear = function(red, green, blue, alpha) {
+  this.gl.clearColor(red || 0, green || 0, blue || 0, alpha || 0)
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+  return this
+}
+
+// toDataUrl([format])
+// returns a base64 url String
+//
+// Save image data to base64 url. Format can be 'jpeg' (default) or 'png'.
+// This can be used as <a> href or window.location.
+//
+Glimg.prototype.toDataURL = function(format) {
+  format = format || 'jpeg'
+  return this.canvas.toDataURL('image/' + format)
+}
+
+// destroy()
+// returns nothing
+//
+// Destroy the object, free allocated memories.
+//
+Glimg.prototype.destroy = function() {
+  if (this.gl) {
+    var key
+    for (key in this._buffers) {
+      this._buffers[key].destroy()
+    }
+
+    for (key in this._textures) {
+      this._textures[key].destroy()
+    }
+
+    for (key in this._shaders) {
+      this._shaders[key].destroy()
+    }
+
+    this.canvas = null
+    this.gl = null
+    this._buffers = null
+    this._textures = null
+    this._shaders = null
+  }
+}
+
+Glimg.prototype.copy = function(sourceCoord, targetCoord) {
+  var s = sourceCoord || {left: 0, top: 0, right : 1, bottom: 1}
+  var t = targetCoord || {left: 0, top: 0, right : 1, bottom: 1}
+
+  this.useShader(shaders.core.copy)
+  .set('aSourceCoord', s.left, s.top, s.right, s.bottom)
+  .set('aTargetCoord', t.left, t.top, t.right, t.bottom)
+  .run()
+
+  return this
+}
+
 // crop(left, top, right, bottom)
 // returns this object
 //
@@ -136,50 +211,6 @@ Glimg.prototype.crop = function(left, top, right, bottom) {
 
   this.setSize(width, height)
   .copy({left: left, top: top, right: right, bottom: bottom})
-
-  return this
-}
-
-// apply()
-// returns this object
-//
-// Apply rendered result back to source image, then reset stage. See 'setStage' 
-// for more details.
-//
-Glimg.prototype.apply = function() {
-  this.setSource(this.sourceUnit, this)
-  return this
-}
-
-// clear(red, green, blue, alpha)
-// returns this object
-//
-// Clear canvas with specified color.
-//
-Glimg.prototype.clear = function(red, green, blue, alpha) {
-  this.gl.clearColor(red, green, blue, alpha)
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-  return this
-}
-
-// toDataUrl()
-// returns a base64 url String
-//
-// Save image data to base64 url.
-// This can be used as <a> href or window.location.
-//
-Glimg.prototype.toDataURL = function() {
-  return this.canvas.toDataURL('image/jpeg')
-}
-
-Glimg.prototype.copy = function(sourceCoord, targetCoord) {
-  var s = sourceCoord || {left: 0, top: 0, right : 1, bottom: 1}
-  var t = targetCoord || {left: 0, top: 0, right : 1, bottom: 1}
-
-  this.useShader(shaders.copy)
-  .set('sourceCoord', s.left, s.top, s.right, s.bottom)
-  .set('targetCoord', t.left, t.top, t.right, t.bottom)
-  .run()
 
   return this
 }
@@ -233,9 +264,29 @@ Glimg.prototype.rotate = function(degree) {
   b = (height + h) / (2 * height)
 
   this.setSize(w, h)
-  .useShader(shaders.transform)
+  .useShader(shaders.core.transform)
   .setMatrix('transform', mat)
-  .set('sourceCoord', l, t, r, b)
+  .set('aSourceCoord', l, t, r, b)
+  .run()
+
+  return this
+}
+
+Glimg.prototype.blend = function(node, options) {
+  options = options || {}
+  var mode = options.mode || 'normal'
+  var coord = options.coord || {left: 0, top: 0, right: 1, bottom: 1}
+  var mask = options.mask || [255, 255, 255, 255]
+
+  this._holdChain = true
+  this.copy()
+  this._holdChain = false
+
+  this.useShader(shaders.blend[mode])
+  .set('aSourceCoord', coord.left, coord.top, coord.right, coord.bottom)
+  .set('aTargetCoord', coord.left, coord.top, coord.right, coord.bottom)
+  .set('foreground', this._unit[2], node)
+  .set('mask', this._unit[3], mask)
   .run()
 
   return this
@@ -264,10 +315,10 @@ Glimg.prototype.blur = function(radius) {
 Glimg.prototype.gaussianBlur = function(radius) {
   if (radius <= 0) return this
 
-  var gaussian = shaders.gaussian256
+  var gaussian = shaders.blur.gaussian256
   for (var i = 2; i < 256; i *= 2) {
     if (radius <= i) {
-      gaussian = shaders['gaussian' + i]
+      gaussian = shaders.blur['gaussian' + i]
       break
     }
   }
@@ -287,7 +338,7 @@ Glimg.prototype.gaussianBlur = function(radius) {
 }
 
 Glimg.prototype.contrast = function(strength) {
-  this.useShader(shaders.contrast)
+  this.useShader(shaders.effects.contrast)
   .set('strength', strength)
   .run()
 
@@ -295,7 +346,7 @@ Glimg.prototype.contrast = function(strength) {
 }
 
 Glimg.prototype.monotone = function(strength) {
-  this.useShader(shaders.monotone)
+  this.useShader(shaders.effects.monotone)
   .set('strength', strength)
   .run()
 
@@ -320,14 +371,6 @@ Glimg.prototype.chain = function() {
     this._chain = {source: this.sourceUnit, target: this.targetUnit, unit: 0, count: 1}
     this.setTarget(this._unit[0])
   }
-  return this
-}
-
-Glimg.prototype.step = function() {
-  if (this._chain.count <= 0) return this
-  var unit = this._chain.unit === 0 ? 1 : 0
-  this.setSource(this.targetUnit).setTarget(this._unit[unit])
-  this._chain.unit = unit
   return this
 }
 
@@ -403,13 +446,22 @@ Glimg.prototype.useShader = function(source) {
   var texture = this.getSource()
   this._shaders[source]
   .use()
-  .set('sourceCoord', 0, 0, 1, 1)
-  .set('targetCoord', 0, 0, 1, 1)
+  .set('aSourceCoord', 0, 0, 1, 1)
+  .set('aTargetCoord', 0, 0, 1, 1)
+  .set('aMaskCoord', 0, 0, 1, 1)
   .set('flipY', this.targetUnit === null ? -1 : 1)
   .set('source', this.sourceUnit, null)
   .set('size', [1 / texture.width, 1 / texture.height, texture.width, texture.height])
 
   return this._shaders[source]
+}
+
+Glimg.prototype.step = function() {
+  if (this._chain.count <= 0 || this._holdChain) return this
+  var unit = this._chain.unit === 0 ? 1 : 0
+  this.setSource(this.targetUnit).setTarget(this._unit[unit])
+  this._chain.unit = unit
+  return this
 }
 
 // private
@@ -454,32 +506,4 @@ Glimg.prototype.useTexture = function(unit, nodeOrWidth, height) {
 
   this._textures[unit].bind()
   return this
-}
-
-// destroy()
-// returns nothing
-//
-// Destroy the object, free allocated memories.
-//
-Glimg.prototype.destroy = function() {
-  if (this.gl) {
-    var key
-    for (key in this._buffers) {
-      this._buffers[key].destroy()
-    }
-
-    for (key in this._textures) {
-      this._textures[key].destroy()
-    }
-
-    for (key in this._shaders) {
-      this._shaders[key].destroy()
-    }
-
-    this.canvas = null
-    this.gl = null
-    this._buffers = null
-    this._textures = null
-    this._shaders = null
-  }
 }

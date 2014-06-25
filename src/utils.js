@@ -23,5 +23,9 @@ module.exports = {
     } else {
       return node
     }
+  },
+
+  isWebkit: function() {
+    return 'WebkitAppearance' in document.documentElement.style
   }
 }

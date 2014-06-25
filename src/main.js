@@ -15,7 +15,7 @@ function init(glimg) {
   if (gl) {
     glimg.info.supported = true
     glimg.info.maxSize = gl.getParameter(gl.MAX_TEXTURE_SIZE)
-    glimg.info.maxUnit = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS)
+    glimg.info.maxUnit = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) - 4
   } else {
     glimg.info.supported = false
   }

@@ -5,7 +5,7 @@ var utils = require('./utils')
 function Shader(glimg, source) {
   this.glimg = glimg
   var gl = this.gl = glimg.gl
-  var vertex = require('./shaders').vertex
+  var vertex = require('./shaders').core.vertex
   var vertexShader = createShader(gl, gl.VERTEX_SHADER, vertex)
   var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, source)
   var program = this.program = gl.createProgram()

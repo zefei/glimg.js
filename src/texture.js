@@ -8,15 +8,30 @@ function Texture(gl, unit, nodeOrWidth, height) {
 
   this.texture = gl.createTexture()
   this.bind()
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
-  if (utils.isNothing(height)) {
+  if (utils.isArray(nodeOrWidth)) {
+    var data = new Uint8Array(nodeOrWidth)
+    var width = Math.ceil(data.length / 4)
+    var height = 1
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
+
+  } else if (utils.isNothing(height)) {
     var node = utils.getNode(nodeOrWidth)
     this.width = node.width
     this.height = node.height
+
+    if (node.getContext && utils.isWebkit()) {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+    }
+
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, node)
 
   } else {

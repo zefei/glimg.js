@@ -5,6 +5,7 @@ uniform vec2 axis;
 uniform sampler2D source;
 uniform vec4 size;
 varying vec2 coord;
+varying vec2 maskCoord;
 const float pi = 3.14159265;
 const float radius = 2.0;
 
