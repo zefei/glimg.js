@@ -96,12 +96,12 @@ Shader.prototype.setMatrix = function(name, values) {
   return this
 }
 
-Shader.prototype.setTexture = function(name, unit, node) {
+Shader.prototype.setTexture = function(name, unit, node, width, height) {
   var gl = this.gl
 
   var location = gl.getUniformLocation(this.program, name)
   if (location !== null) {
-    if (node) this.glimg.useTexture(unit, node)
+    if (node) this.glimg.useTexture(unit, node, width, height)
     gl.uniform1i(location, unit)
   }
 

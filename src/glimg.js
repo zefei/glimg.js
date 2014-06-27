@@ -6,7 +6,7 @@ var Texture = require('./texture')
 var shaders = require('./shaders')
 var utils = require('./utils')
 
-// new Glimg([canvas])
+// new Glimg([canvas, [options]])
 //
 // Create an empty Glimg object.
 //
@@ -15,26 +15,34 @@ var utils = require('./utils')
 //
 // Notice that you cannot use a canvas that has called getContext('2d').
 //
-function Glimg(canvas) {
+// Options:
+//
+// resize (default 2048): loaded image will be downsized to this value if its 
+// width or height exceeds it; 'max' means the limit is the maximal value 
+// browser supports.
+//
+function Glimg(canvas, options) {
   if (canvas) {
     canvas = utils.getNode(canvas)
   } else {
     canvas = document.createElement('canvas')
   }
 
-  var options = {
+  var glopts = {
     preserveDrawingBuffer: true,
     premultipliedAlpha: true
   }
 
-  var gl = canvas.getContext('webgl', options) ||
-           canvas.getContext('experimental-webgl', options)
+  var gl = canvas.getContext('webgl', glopts) ||
+           canvas.getContext('experimental-webgl', glopts)
 
   if (!gl) throw 'WebGL is not supported'
 
   this.isGlimg = true
   this.canvas = canvas
   this.gl = gl
+  this.options = options || {}
+  this.options.resize = this.options.resize || 2048
   this._buffers = {}
   this._textures = {}
   this._shaders = {}
@@ -54,7 +62,7 @@ function Glimg(canvas) {
 //
 Glimg.prototype.load = function(node, nocopy) {
   node = utils.getNode(node)
-  this.setSource(this.sourceUnit, node).setSize(node.width, node.height)
+  this.setSource(this.sourceUnit, node).setTarget(this.targetUnit)
   if (!nocopy) this.copy()
   return this
 }
@@ -87,7 +95,7 @@ Glimg.prototype.setSize = function(width, height) {
     this.height = this.canvas.height = height
     this.zoom(this._zoomLevel)
   } else {
-    this.useTexture(this.targetUnit, width, height)
+    this.useTexture(this.targetUnit, null, width, height)
   }
 
   this.gl.viewport(0, 0, width, height)
@@ -275,8 +283,27 @@ Glimg.prototype.rotate = function(degree) {
 Glimg.prototype.blend = function(node, options) {
   options = options || {}
   var mode = options.mode || 'normal'
+  var opacity = utils.isNothing(options.opacity) ? 1 : options.opacity
   var coord = options.coord || {left: 0, top: 0, right: 1, bottom: 1}
   var mask = options.mask || [255, 255, 255, 255]
+
+  var foregroundUnit, foregroundNode, maskUnit, maskNode
+
+  if (utils.isNumber(node)) {
+    foregroundUnit = node
+    foregroundNode = null
+  } else {
+    foregroundUnit = this._unit[2]
+    foregroundNode = node
+  }
+
+  if (utils.isNumber(mask)) {
+    maskUnit = mask
+    maskNode = null
+  } else {
+    maskUnit = this._unit[3]
+    maskNode = mask
+  }
 
   this._holdChain = true
   this.copy()
@@ -285,8 +312,9 @@ Glimg.prototype.blend = function(node, options) {
   this.useShader(shaders.blend[mode])
   .set('aSourceCoord', coord.left, coord.top, coord.right, coord.bottom)
   .set('aTargetCoord', coord.left, coord.top, coord.right, coord.bottom)
-  .set('foreground', this._unit[2], node)
-  .set('mask', this._unit[3], mask)
+  .set('foreground', foregroundUnit, foregroundNode)
+  .set('opacity', opacity)
+  .setTexture('mask', maskUnit, maskNode, 1, 1)
   .run()
 
   return this
@@ -337,17 +365,80 @@ Glimg.prototype.gaussianBlur = function(radius) {
   return this
 }
 
-Glimg.prototype.contrast = function(strength) {
-  this.useShader(shaders.effects.contrast)
-  .set('strength', strength)
+Glimg.prototype.brightnessContrast = function(brightness, contrast) {
+  brightness = brightness || 0
+  contrast = utils.isNothing(contrast) ? 1 : contrast
+
+  this.useShader(shaders.effects['brightness-contrast'])
+  .set('brightness', brightness)
+  .set('contrast', contrast)
   .run()
 
   return this
 }
 
-Glimg.prototype.monotone = function(strength) {
-  this.useShader(shaders.effects.monotone)
+Glimg.prototype.hueSaturation = function(hue, saturation, lightness) {
+  hue = hue || 0
+  saturation = saturation || 0
+  lightness = lightness || 0
+
+  this.useShader(shaders.effects['hue-saturation'])
+  .set('hue', hue)
+  .set('saturation', saturation)
+  .set('lightness', lightness)
+  .run()
+
+  return this
+}
+
+Glimg.prototype.splitTone = function(highlight, shadow) {
+  highlight = highlight || [0.5, 0.5, 0.5]
+  shadow = shadow || [0.5, 0.5, 0.5]
+
+  this.useShader(shaders.effects['split-tone'])
+  .set('highlight', highlight)
+  .set('shadow', shadow)
+  .run()
+
+  return this
+}
+
+Glimg.prototype.duotone = function(highlight, shadow) {
+  highlight = highlight || [1, 1, 1]
+  shadow = shadow || [1, 1, 1]
+
+  this.useShader(shaders.effects.duotone)
+  .set('highlight', highlight)
+  .set('shadow', shadow)
+  .run()
+
+  return this
+}
+
+Glimg.prototype.sharpen = function(strength, radius) {
+  radius = radius || 5
+
+  var source = this.sourceUnit
+  var target = this.targetUnit
+
+  this.setTarget(this._unit[2])
+  .copy()
+  .setSource(this._unit[2]).setTarget(this._unit[3])
+  .blur(radius)
+  .setSource(this._unit[2]).setTarget(target)
+  .useShader(shaders.effects.sharpen)
   .set('strength', strength)
+  .set('background', this._unit[3], null)
+  .run()
+  .setSource(source)
+
+  return this
+}
+
+Glimg.prototype.vignette = function(darken, brighten) {
+  this.useShader(shaders.effects.vignette)
+  .set('darken', darken)
+  .set('brighten', brighten)
   .run()
 
   return this
@@ -494,14 +585,14 @@ Glimg.prototype.useBuffer = function(array) {
 //
 // To create/pass textures to shader, use shader.set() instead.
 //
-Glimg.prototype.useTexture = function(unit, nodeOrWidth, height) {
+Glimg.prototype.useTexture = function(unit, nodeOrData, width, height) {
   var texture = this._textures[unit]
-  var reuse = !utils.isNothing(height) && texture && texture.framebuffer &&
-              texture.width === nodeOrWidth && texture.height === height
+  var reuse = !nodeOrData && texture && texture.framebuffer &&
+              texture.width === width && texture.height === height
 
   if (!reuse) {
     if (this._textures[unit]) this._textures[unit].destroy()
-    this._textures[unit] = new Texture(this.gl, unit, nodeOrWidth, height)
+    this._textures[unit] = new Texture(this.gl, unit, nodeOrData, width, height, this.options)
   }
 
   this._textures[unit].bind()

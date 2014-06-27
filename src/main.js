@@ -2,8 +2,8 @@ module.exports = glimg
 
 var Glimg = require('./glimg')
 
-function glimg(canvas) {
-  return new Glimg(canvas)
+function glimg(canvas, options) {
+  return new Glimg(canvas, options)
 }
 
 init(glimg)

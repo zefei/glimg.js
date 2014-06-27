@@ -1,10 +1,10 @@
 precision mediump float;
 
 uniform sampler2D source;
-uniform sampler2D foreground;
-uniform sampler2D mask;
 uniform vec4 size;
-uniform float opacity;
+uniform float hue;
+uniform float saturation;
+uniform float lightness;
 varying vec2 coord;
 varying vec2 maskCoord;
 
@@ -34,14 +34,12 @@ vec3 hcl2rgb(vec3 c) {
 }
 
 void main() {
-  vec4 dst = texture2D(source, coord);
-  vec4 src = texture2D(foreground, maskCoord);
-  vec4 blend;
+  vec4 src = texture2D(source, coord);
 
-  vec3 hcl = rgb2hcl(dst.rgb);
-  blend.rgb = hcl2rgb(vec3(hcl.x, rgb2hcl(src.rgb).y, hcl.z));
+  vec3 hcl = rgb2hcl(src.rgb);
+  hcl.x = mod(hcl.x + hue * 6.0, 6.0);
+  hcl.y *= saturation;
+  hcl.z += lightness;
 
-  blend.a = src.a;
-  blend *= opacity * texture2D(mask, maskCoord).a;
-  gl_FragColor = blend + dst * (1.0 - blend.a);
+  gl_FragColor = vec4(hcl2rgb(hcl), src.a);
 }

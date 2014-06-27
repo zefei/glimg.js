@@ -13,10 +13,12 @@
 
     <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css">
     <link rel="stylesheet" href="bower_components/powerange/dist/powerange.css">
+    <link rel="stylesheet" href="bower_components/angular-bootstrap-colorpicker/css/colorpicker.css">
     <link rel="stylesheet" href="demo.css">
 
     <script src="bower_components/angular/angular.js"></script>
     <script src="bower_components/powerange/dist/powerange.js"></script>
+    <script src="bower_components/angular-bootstrap-colorpicker/js/bootstrap-colorpicker-module.js"></script>
     <script src="glimg.js"></script>
     <script src="demo.js"></script>
   </head>
@@ -40,6 +42,11 @@
     </div>
 
     <div class="container">
+      <input colorpicker="rgb" ng-model="input.color1" type="text" ng-change="onColorChange()">
+      <input colorpicker="rgb" ng-model="input.color2" type="text" ng-change="onColorChange()">
+    </div>
+
+    <div class="container">
       <p>Blur radius: {{input.blur}}</p>
       <div class="slider">
         <slider min="0" max="200" start="0" ng-model="input.blur" decimal="true"
@@ -50,7 +57,7 @@
     <div class="container">
       <p>Rotate degree: {{input.rotate}}</p>
       <div class="slider">
-        <slider min="0" max="360" start="0" ng-model="input.rotate"
+        <slider min="-1" max="1" decimal="true" start="0" ng-model="input.rotate"
         ng-change="onRotateChange()"></slider>
       </div>
     </div>
@@ -58,7 +65,7 @@
     <div class="container">
       <p>Gray: {{input.gray}}</p>
       <div class="slider">
-        <slider min="0" max="100" start="0" ng-model="input.gray"
+        <slider min="0" max="3" decimal="true" start="1" ng-model="input.gray"
         ng-change="onGrayChange()"></slider>
       </div>
     </div>
@@ -66,7 +73,7 @@
     <div class="container">
       <p>Contrast: {{input.contrast}}</p>
       <div class="slider">
-        <slider min="0" max="100" start="50" ng-model="input.contrast"
+        <slider min="-1" max="1" decimal="true" start="0" ng-model="input.contrast"
         ng-change="onContrastChange()"></slider>
       </div>
     </div>

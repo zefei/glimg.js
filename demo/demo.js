@@ -1,6 +1,6 @@
 'use strict'
 
-angular.module('demo', [])
+angular.module('demo', ['colorpicker.module'])
 
 .factory('testFactory', [function() {
   'pass'
@@ -11,13 +11,35 @@ angular.module('demo', [])
 }])
 
 .controller('DemoCtrl', ['$scope', function($scope) {
+  window.ss = $scope
   window.tt = $scope.image = glimg('#canvas').loadFromUrl('demo.jpg').setZoom(0.3)
   $scope.test = glimg('#test').setZoom(0.3)
 
-  $scope.input = {blur: 0, rotate: 0, gray: 0, contrast: 50}
+  $scope.input = {
+    blur: 0,
+    rotate: 0,
+    gray: 0,
+    contrast: 0,
+    color1: 'rgb(127,127,127)',
+    color2: 'rgb(127,127,127)'
+  }
 
   $scope.clone = function() {
     $scope.test.load($scope.image)
+  }
+
+  function parseColor(string) {
+    var c = string.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i)
+    var r = parseInt(c[1]) / 255
+    var g = parseInt(c[2]) / 255
+    var b = parseInt(c[3]) / 255
+    return [r, g, b]
+  }
+
+  $scope.onColorChange = function() {
+    var highlight = parseColor($scope.input.color1)
+    var shadow = parseColor($scope.input.color2)
+    $scope.image.splitTone(highlight, shadow)
   }
 
   $scope.demo3 = new Image()
@@ -36,33 +58,23 @@ angular.module('demo', [])
 
   $scope.copy = function() {
     $scope.image
-    .blend($scope.demo3, {mode: 'hue'})
-  }
-
-  $scope.onRotateChange = function() {
-    $scope.image.rotate($scope.input.rotate)
+    .blend($scope.demo3, {mode: 'normal', opacity: 1.0, mask: $scope.text})
   }
 
   $scope.onBlurChange = function() {
     $scope.image.blur($scope.input.blur)
   }
 
+  $scope.onRotateChange = function() {
+    $scope.image.hueSaturation($scope.input.rotate, $scope.input.gray, $scope.input.contrast)
+  }
+
   $scope.onGrayChange = function() {
-    $scope.image.chain()
-    .blur($scope.input.blur)
-    .monotone($scope.input.gray / 100)
-    .blend($scope.demo3, {mode: 'normal', mask: $scope.text, coord: {left: 0.3, top: 0.4, right: 0.7, bottom: 0.7}})
-    .contrast($scope.input.contrast / 50)
-    .done()
+    $scope.image.hueSaturation($scope.input.rotate, $scope.input.gray, $scope.input.contrast)
   }
 
   $scope.onContrastChange = function() {
-    $scope.image.chain()
-    .blur($scope.input.blur)
-    .monotone($scope.input.gray / 100)
-    .blend($scope.demo3, {mode: 'normal', mask: $scope.text, coord: {left: 0.3, top: 0.4, right: 0.7, bottom: 0.7}})
-    .contrast($scope.input.contrast / 50)
-    .done()
+    $scope.image.hueSaturation($scope.input.rotate, $scope.input.gray, $scope.input.contrast)
   }
 
   var download = document.getElementById('download')

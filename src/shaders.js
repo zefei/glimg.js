@@ -35,7 +35,11 @@ module.exports = {
     gaussian256: fs.readFileSync('src/shaders/blur/gaussian256.glsl', 'utf8')
   },
   effects: {
-    contrast: fs.readFileSync('src/shaders/effects/contrast.glsl', 'utf8'),
-    monotone: fs.readFileSync('src/shaders/effects/monotone.glsl', 'utf8')
+    'brightness-contrast': fs.readFileSync('src/shaders/effects/brightness-contrast.glsl', 'utf8'),
+    'hue-saturation': fs.readFileSync('src/shaders/effects/hue-saturation.glsl', 'utf8'),
+    'split-tone': fs.readFileSync('src/shaders/effects/split-tone.glsl', 'utf8'),
+    duotone: fs.readFileSync('src/shaders/effects/duotone.glsl', 'utf8'),
+    sharpen: fs.readFileSync('src/shaders/effects/sharpen.glsl', 'utf8'),
+    vignette: fs.readFileSync('src/shaders/effects/vignette.glsl', 'utf8')
   }
 }

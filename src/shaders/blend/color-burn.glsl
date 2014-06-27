@@ -4,6 +4,7 @@ uniform sampler2D source;
 uniform sampler2D foreground;
 uniform sampler2D mask;
 uniform vec4 size;
+uniform float opacity;
 varying vec2 coord;
 varying vec2 maskCoord;
 
@@ -17,6 +18,6 @@ void main() {
   blend.b = src.b == 0.0 ? 0.0 : 1.0 - (1.0 - dst.b) / src.b;
 
   blend.a = src.a;
-  blend *= texture2D(mask, maskCoord);
+  blend *= opacity * texture2D(mask, maskCoord).a;
   gl_FragColor = blend + dst * (1.0 - blend.a);
 }

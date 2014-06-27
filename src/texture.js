@@ -2,9 +2,11 @@ module.exports = Texture
 
 var utils = require('./utils')
 
-function Texture(gl, unit, nodeOrWidth, height) {
+function Texture(gl, unit, nodeOrData, width, height, options) {
   this.gl = gl
   this.unit = unit
+  this.width = width
+  this.height = height
 
   this.texture = gl.createTexture()
   this.bind()
@@ -14,34 +16,35 @@ function Texture(gl, unit, nodeOrWidth, height) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
-  if (utils.isArray(nodeOrWidth)) {
-    var data = new Uint8Array(nodeOrWidth)
-    var width = Math.ceil(data.length / 4)
-    var height = 1
-
+  if (utils.isArray(nodeOrData)) {
+    var data = new Uint8Array(nodeOrData)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
 
-  } else if (utils.isNothing(height)) {
-    var node = utils.getNode(nodeOrWidth)
+  } else if (utils.isNothing(nodeOrData)) {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    this.framebuffer = gl.createFramebuffer()
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer)
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0)
+
+  } else {
+    var node = utils.getNode(nodeOrData)
+
+    var maxSize = gl.getParameter(gl.MAX_TEXTURE_SIZE)
+    if (utils.isNumber(options.resize)) {
+      maxSize = Math.min(maxSize, options.resize)
+    }
+
+    node = resize(node, maxSize)
     this.width = node.width
     this.height = node.height
 
-    if (node.getContext && utils.isWebkit()) {
+    if (utils.isWebgl(node) && utils.isWebkit()) {
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
     }
 
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, node)
-
-  } else {
-    this.width = nodeOrWidth
-    this.height = height
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-
-    this.framebuffer = gl.createFramebuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer)
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0)
   }
 }
 
@@ -61,4 +64,30 @@ Texture.prototype.destroy = function() {
   }
   this.texture = null
   this.gl = null
+}
+
+function resize(node, maxSize) {
+  if (node.width <= maxSize && node.height <= maxSize) {
+    return node
+  } else if (node.width > maxSize * 2 || node.height > maxSize * 2) {
+    return resize(resize(node, maxSize * 2), maxSize)
+  } else {
+    var width, height
+    if (node.width > node.height) {
+      width = maxSize
+      height = Math.floor(maxSize / node.width * node.height)
+    } else {
+      height = maxSize
+      width = Math.floor(maxSize / node.height * node.width)
+    }
+
+    var canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    var ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, width, height)
+    ctx.drawImage(node, 0, 0, width, height)
+
+    return canvas
+  }
 }
