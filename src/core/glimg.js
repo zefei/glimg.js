@@ -3,6 +3,7 @@ module.exports = Glimg
 var Shader = require('./shader')
 var Buffer = require('./buffer')
 var Texture = require('./texture')
+var Spline = require('./spline')
 var shaders = require('./shaders')
 var utils = require('./utils')
 
@@ -280,9 +281,36 @@ Glimg.prototype.rotate = function(degree) {
   return this
 }
 
+Glimg.prototype.curves = function(points) {
+  spline = new Spline(points)
+
+  var lut = []
+  for (var x = 0; x <= 255; x++) {
+    var y = utils.clamp(Math.round(spline.interpolate(x / 255) * 255), 0, 255)
+    lut[x] = [y, y, y, 255]
+  }
+
+  this.useTexture(this._unit[2], utils.flatten(lut), 256, 1)
+  .useShader(shaders.core.lut)
+  .set('lut', this._unit[2], null)
+  .run()
+
+  return this
+}
+
+Glimg.prototype.levels = function(black, midpoint, white) {
+  this.useShader(shaders.adjustments.levels)
+  .set('black', black)
+  .set('midpoint', midpoint)
+  .set('white', white)
+  .run()
+
+  return this
+}
+
 Glimg.prototype.blend = function(node, options) {
   options = options || {}
-  var mode = options.mode || 'normal'
+  var mode = utils.camelCase(options.mode || 'normal')
   var opacity = utils.isNothing(options.opacity) ? 1 : options.opacity
   var coord = options.coord || {left: 0, top: 0, right: 1, bottom: 1}
   var mask = options.mask || [255, 255, 255, 255]
@@ -366,13 +394,34 @@ Glimg.prototype.gaussianBlur = function(radius) {
 }
 
 Glimg.prototype.brightnessContrast = function(brightness, contrast) {
-  brightness = brightness || 0
-  contrast = utils.isNothing(contrast) ? 1 : contrast
+  var mid = 0.5 + brightness / 2;
+  var spline = new Spline([[0, 0], [0.5, mid], [1, 1]])
 
-  this.useShader(shaders.effects['brightness-contrast'])
-  .set('brightness', brightness)
-  .set('contrast', contrast)
+  var shadow = spline.interpolate(0.25) - contrast / 4;
+  var highlight = spline.interpolate(0.75) + contrast / 4;
+
+  this.curves([[0, 0], [0.25, shadow], [0.5, mid], [0.75, highlight], [1, 1]])
+
+  return this
+}
+
+Glimg.prototype.recover = function(highlight, shadow, radius) {
+  radius = radius || 5
+
+  var source = this.sourceUnit
+  var target = this.targetUnit
+
+  this.setTarget(this._unit[2])
+  .copy()
+  .setSource(this._unit[2]).setTarget(this._unit[3])
+  .blur(radius)
+  .setSource(this._unit[2]).setTarget(target)
+  .useShader(shaders.adjustments.recover)
+  .set('highlight', highlight)
+  .set('shadow', shadow)
+  .set('background', this._unit[3], null)
   .run()
+  .setSource(source)
 
   return this
 }
@@ -382,7 +431,7 @@ Glimg.prototype.hueSaturation = function(hue, saturation, lightness) {
   saturation = saturation || 0
   lightness = lightness || 0
 
-  this.useShader(shaders.effects['hue-saturation'])
+  this.useShader(shaders.adjustments.hueSaturation)
   .set('hue', hue)
   .set('saturation', saturation)
   .set('lightness', lightness)
@@ -395,7 +444,7 @@ Glimg.prototype.splitTone = function(highlight, shadow) {
   highlight = highlight || [0.5, 0.5, 0.5]
   shadow = shadow || [0.5, 0.5, 0.5]
 
-  this.useShader(shaders.effects['split-tone'])
+  this.useShader(shaders.effects.splitTone)
   .set('highlight', highlight)
   .set('shadow', shadow)
   .run()

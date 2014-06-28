@@ -1,6 +1,6 @@
 module.exports = glimg
 
-var Glimg = require('./glimg')
+var Glimg = require('./core/glimg')
 
 function glimg(canvas, options) {
   return new Glimg(canvas, options)
@@ -20,5 +20,5 @@ function init(glimg) {
     glimg.info.supported = false
   }
 
-  glimg.shaders = require('./shaders')
+  glimg.shaders = require('./core/shaders')
 }

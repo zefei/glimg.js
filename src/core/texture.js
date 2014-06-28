@@ -18,8 +18,7 @@ function Texture(gl, unit, nodeOrData, width, height, options) {
 
   if (utils.isArray(nodeOrData)) {
     var data = new Uint8Array(nodeOrData)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
 
   } else if (utils.isNothing(nodeOrData)) {

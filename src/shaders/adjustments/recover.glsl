@@ -1,13 +1,18 @@
 precision mediump float;
 
 uniform sampler2D source;
+uniform sampler2D background;
 uniform vec4 size;
-uniform vec3 highlight;
-uniform vec3 shadow;
+uniform float highlight;
+uniform float shadow;
 varying vec2 coord;
 varying vec2 maskCoord;
 
 const float e = 10e-10;
+
+float luma(vec3 c) {
+  return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+}
 
 vec3 softlight(vec3 src, vec3 dst) {
   vec3 color;
@@ -20,21 +25,13 @@ vec3 softlight(vec3 src, vec3 dst) {
   return color;
 }
 
-float luma(vec3 c) {
-  return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
-}
-
 void main() {
   vec4 src = texture2D(source, coord);
 
-  // cast soft light using highlight and shadow
-  vec3 h = softlight(highlight, src.rgb);
-  vec3 s = softlight(shadow, src.rgb);
+  float invl = 1.0 - luma(texture2D(background, coord).rgb);
+  vec3 blend = softlight(vec3(invl, invl, invl), src.rgb);
 
-  // blend based on luminance
-  float l = luma(src.rgb);
-  vec3 c = h * l + s * (1.0 - l);
-  c = c / (luma(c) + e) * l;
-
-  gl_FragColor = vec4(c, src.a);
+  src.rgb += clamp(blend - src.rgb, -1.0, 0.0) * highlight +
+    clamp(blend - src.rgb, 0.0, 1.0) * shadow;
+  gl_FragColor = src;
 }

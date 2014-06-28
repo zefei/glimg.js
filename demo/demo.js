@@ -66,15 +66,24 @@ angular.module('demo', ['colorpicker.module'])
   }
 
   $scope.onRotateChange = function() {
-    $scope.image.hueSaturation($scope.input.rotate, $scope.input.gray, $scope.input.contrast)
+    /*
+    $scope.image.levels($scope.input.rotate, $scope.input.gray, $scope.input.contrast)
+    */
+    $scope.image.curves([
+      [0, 0],
+      [0.25, $scope.input.rotate],
+      [0.5, $scope.input.gray],
+      [0.75, $scope.input.contrast],
+      [1, 1]
+    ])
   }
 
   $scope.onGrayChange = function() {
-    $scope.image.hueSaturation($scope.input.rotate, $scope.input.gray, $scope.input.contrast)
+    $scope.image.brightnessContrast($scope.input.gray, $scope.input.contrast)
   }
 
   $scope.onContrastChange = function() {
-    $scope.image.hueSaturation($scope.input.rotate, $scope.input.gray, $scope.input.contrast)
+    $scope.image.brightnessContrast($scope.input.gray, $scope.input.contrast)
   }
 
   var download = document.getElementById('download')

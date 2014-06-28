@@ -73,7 +73,7 @@ Shader.prototype.setVector = function(name, values) {
   if (location !== null) {
     var n = utils.isArray(values[0]) ? values[0].length : values.length
     var func = 'uniform' + n + 'fv'
-    gl[func](location, [].concat(values))
+    gl[func](location, utils.flatten(values))
   }
 
   return this

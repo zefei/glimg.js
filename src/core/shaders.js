@@ -4,7 +4,13 @@ module.exports = {
   core: {
     vertex: fs.readFileSync('src/shaders/core/vertex.glsl', 'utf8'),
     copy: fs.readFileSync('src/shaders/core/copy.glsl', 'utf8'),
-    transform: fs.readFileSync('src/shaders/core/transform.glsl', 'utf8')
+    transform: fs.readFileSync('src/shaders/core/transform.glsl', 'utf8'),
+    lut: fs.readFileSync('src/shaders/core/lut.glsl', 'utf8')
+  },
+  adjustments: {
+    levels: fs.readFileSync('src/shaders/adjustments/levels.glsl', 'utf8'),
+    recover: fs.readFileSync('src/shaders/adjustments/recover.glsl', 'utf8'),
+    hueSaturation: fs.readFileSync('src/shaders/adjustments/hueSaturation.glsl', 'utf8')
   },
   blend: {
     normal: fs.readFileSync('src/shaders/blend/normal.glsl', 'utf8'),
@@ -13,10 +19,10 @@ module.exports = {
     overlay: fs.readFileSync('src/shaders/blend/overlay.glsl', 'utf8'),
     darken: fs.readFileSync('src/shaders/blend/darken.glsl', 'utf8'),
     lighten: fs.readFileSync('src/shaders/blend/lighten.glsl', 'utf8'),
-    'color-dodge': fs.readFileSync('src/shaders/blend/color-dodge.glsl', 'utf8'),
-    'color-burn': fs.readFileSync('src/shaders/blend/color-burn.glsl', 'utf8'),
-    'hard-light': fs.readFileSync('src/shaders/blend/hard-light.glsl', 'utf8'),
-    'soft-light': fs.readFileSync('src/shaders/blend/soft-light.glsl', 'utf8'),
+    colorDodge: fs.readFileSync('src/shaders/blend/colorDodge.glsl', 'utf8'),
+    colorBurn: fs.readFileSync('src/shaders/blend/colorBurn.glsl', 'utf8'),
+    hardLight: fs.readFileSync('src/shaders/blend/hardLight.glsl', 'utf8'),
+    softLight: fs.readFileSync('src/shaders/blend/softLight.glsl', 'utf8'),
     difference: fs.readFileSync('src/shaders/blend/difference.glsl', 'utf8'),
     exclusion: fs.readFileSync('src/shaders/blend/exclusion.glsl', 'utf8'),
     hue: fs.readFileSync('src/shaders/blend/hue.glsl', 'utf8'),
@@ -35,9 +41,7 @@ module.exports = {
     gaussian256: fs.readFileSync('src/shaders/blur/gaussian256.glsl', 'utf8')
   },
   effects: {
-    'brightness-contrast': fs.readFileSync('src/shaders/effects/brightness-contrast.glsl', 'utf8'),
-    'hue-saturation': fs.readFileSync('src/shaders/effects/hue-saturation.glsl', 'utf8'),
-    'split-tone': fs.readFileSync('src/shaders/effects/split-tone.glsl', 'utf8'),
+    splitTone: fs.readFileSync('src/shaders/effects/splitTone.glsl', 'utf8'),
     duotone: fs.readFileSync('src/shaders/effects/duotone.glsl', 'utf8'),
     sharpen: fs.readFileSync('src/shaders/effects/sharpen.glsl', 'utf8'),
     vignette: fs.readFileSync('src/shaders/effects/vignette.glsl', 'utf8')

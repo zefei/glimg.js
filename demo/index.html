@@ -57,7 +57,7 @@
     <div class="container">
       <p>Rotate degree: {{input.rotate}}</p>
       <div class="slider">
-        <slider min="-1" max="1" decimal="true" start="0" ng-model="input.rotate"
+        <slider min="0" max="1" decimal="true" start="0" ng-model="input.rotate"
         ng-change="onRotateChange()"></slider>
       </div>
     </div>
@@ -65,7 +65,7 @@
     <div class="container">
       <p>Gray: {{input.gray}}</p>
       <div class="slider">
-        <slider min="0" max="3" decimal="true" start="1" ng-model="input.gray"
+        <slider min="-1" max="1" decimal="true" start="0" ng-model="input.gray"
         ng-change="onGrayChange()"></slider>
       </div>
     </div>

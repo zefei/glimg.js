@@ -32,5 +32,19 @@ module.exports = {
     } else {
       return node
     }
+  },
+
+  clamp: function(value, min, max) {
+    return value < min ? min : (value > max ? max : value)
+  },
+
+  flatten: function(array) {
+    return Array.prototype.concat.apply([], array)
+  },
+
+  camelCase: function(string) {
+    return string.toLowerCase().replace(/-(.)/g, function(_, word) {
+      return word.toUpperCase()
+    })
   }
 }
