@@ -85,11 +85,11 @@ Shader.prototype.setMatrix = function(name, values) {
   var location = gl.getUniformLocation(this.program, name)
   if (location !== null) {
     if (values.length === 4) {
-      gl.uniformMatrix2fv(location, false, values)
+      gl.uniformMatrix2fv(location, false, utils.transpose(values))
     } else if (values.length === 9) {
-      gl.uniformMatrix3fv(location, false, values)
+      gl.uniformMatrix3fv(location, false, utils.transpose(values))
     } else if (values.length === 16) {
-      gl.uniformMatrix4fv(location, false, values)
+      gl.uniformMatrix4fv(location, false, utils.transpose(values))
     }
   }
 

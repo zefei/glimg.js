@@ -6,6 +6,7 @@ var Texture = require('./texture')
 var Spline = require('./spline')
 var shaders = require('./shaders')
 var utils = require('./utils')
+var whiteBalance = require('./whiteBalance')
 
 // new Glimg([canvas, [options]])
 //
@@ -196,6 +197,42 @@ Glimg.prototype.destroy = function() {
   }
 }
 
+// getpixels([unit])
+// returns pixel data (RGBA) in Uint8Array
+//
+// unit can be
+// number: the specified image unit
+// null: the canvas
+// 'source': source image
+// 'target': target image
+// default to 'target'
+//
+Glimg.prototype.getPixels = function(unit) {
+  if (unit === 'source') unit = this.sourceUnit
+  if (unit === 'target' || typeof unit === 'undefined') unit = this.targetUnit
+
+  var source = this.sourceUnit
+  var target = this.targetUnit
+
+  if (unit !== target) {
+    if (unit === null || this._textures[unit].framebuffer) {
+      this.setTarget(unit)
+    } else {
+      this._holdChain = true
+      this.setSource(unit).setTarget(this._unit[2]).copy()
+      this._holdChain = false
+    }
+  }
+
+  var image = this.getTarget()
+  var size = image.width * image.height * 4
+  var pixels = new Uint8Array(size)
+  this.gl.readPixels(0, 0, image.width, image.height, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pixels)
+
+  this.setSource(source).setTarget(target)
+  return pixels
+}
+
 Glimg.prototype.copy = function(sourceCoord, targetCoord) {
   var s = sourceCoord || {left: 0, top: 0, right : 1, bottom: 1}
   var t = targetCoord || {left: 0, top: 0, right : 1, bottom: 1}
@@ -224,14 +261,43 @@ Glimg.prototype.crop = function(left, top, right, bottom) {
   return this
 }
 
-Glimg.prototype.rotate = function(degree) {
-  // rotation matrix
-  var theta = Math.PI / 180 * degree
-  var mat = [Math.cos(theta), -Math.sin(theta), Math.sin(theta), Math.cos(theta)]
+Glimg.prototype.transform = function(matrix, cropCoord) {
+  if (matrix.length == 4) {
+    matrix = [
+      matrix[0], matrix[1], 0,
+      matrix[2], matrix[3], 0,
+      0, 0, 1
+    ]
+  }
 
+  var c = cropCoord || {left: 0, top: 0, right : 1, bottom: 1}
+  var width = (c.right - c.left) * this.getSource().width
+  var height = (c.bottom - c.top) * this.getSource().height
+
+  this.setSize(width, height)
+  .useShader(shaders.core.transform)
+  .set('transform', matrix)
+  .set('aSourceCoord', c.left, c.top, c.right, c.bottom)
+  .run()
+
+  return this
+}
+
+Glimg.prototype.rotate = function(degree) {
   // source dimension
   var width = this.getSource().width
   var height = this.getSource().height
+
+  // rotation matrix
+  var theta = Math.PI / 180 * degree
+  var sint = Math.sin(theta)
+  var cost = Math.cos(theta)
+  var r = width / height
+  var mat = [
+    cost, -sint / r, 0.5 * (1 - cost + sint / r),
+    sint * r, cost, 0.5 * (1 - sint * r - cost),
+    0, 0, 1
+  ]
 
   // maximal fitting rectangle
   // http://stackoverflow.com/questions/5789239/calculate-largest-rectangle-in-a-rotated-rectangle
@@ -265,17 +331,21 @@ Glimg.prototype.rotate = function(degree) {
     h = w1 - 2 * x
   }
 
-  // dimension transform
+  // crop coordinates
   var l, t, r, b;
   l = (width - w) / (2 * width)
   r = (width + w) / (2 * width)
   t = (height - h) / (2 * height)
   b = (height + h) / (2 * height)
 
-  this.setSize(w, h)
-  .useShader(shaders.core.transform)
-  .setMatrix('transform', mat)
-  .set('aSourceCoord', l, t, r, b)
+  this.transform(mat, {left: l, top: t, right: r, bottom: b})
+  return this
+}
+
+Glimg.prototype.replaceColor = function(lookUpTable) {
+  this.useTexture(this._unit[2], utils.flatten(lookUpTable), 256, 1)
+  .useShader(shaders.core.lut)
+  .set('lut', this._unit[2], null)
   .run()
 
   return this
@@ -290,11 +360,7 @@ Glimg.prototype.curves = function(points) {
     lut[x] = [y, y, y, 255]
   }
 
-  this.useTexture(this._unit[2], utils.flatten(lut), 256, 1)
-  .useShader(shaders.core.lut)
-  .set('lut', this._unit[2], null)
-  .run()
-
+  this.replaceColor(lut)
   return this
 }
 
@@ -305,6 +371,90 @@ Glimg.prototype.levels = function(black, midpoint, white) {
   .set('white', white)
   .run()
 
+  return this
+}
+
+Glimg.prototype.convolve = function(matrix, divisor) {
+  matrix = matrix.map(function(i) { return [i] })
+  divisor = divisor || 1
+
+  var dim = Math.sqrt(matrix.length)
+  var radius = (dim - 1) / 2
+  var convolve = '#define dim ' + dim + '\n' +
+                 '#define radius ' + radius + '\n\n' +
+                 shaders.core.convolve
+
+  this.useShader(convolve)
+  .set('matrix', matrix)
+  .set('divisor', divisor)
+  .run()
+
+  return this
+}
+
+// histogram([unit])
+// returns histogram array
+//
+// unit can be
+// number: the specified image unit
+// null: the canvas
+// 'source': source image
+// 'target': target image
+// default to 'target'
+//
+Glimg.prototype.histogram = function(unit) {
+  var pixels = this.getPixels(unit)
+
+  var histogram = [[], [], []]
+  for (var channel = 0; channel < 3; channel++) {
+    for (var value = 0; value < 256; value++) {
+      histogram[channel][value] = 0
+    }
+  }
+
+  for (var i = 0; i < pixels.length; i += 4) {
+    for (var channel = 0; channel < 3; channel++) {
+      var value = pixels[i + channel]
+      histogram[channel][value] += 1
+    }
+  }
+
+  return histogram
+}
+
+// whiteBalance(red, green, blue)
+// whiteBalance(temperature, tint)
+// whiteBalance()
+// returns this object
+//
+// White balance image based on neutral color (red/green/blue), 
+// temperature/tint, or automatically
+//
+Glimg.prototype.whiteBalance = function() {
+  var white
+  if (arguments.length === 0) {
+    var pixels = this.getPixels('source')
+    white = whiteBalance.getWhiteColor(pixels)
+  } else if (arguments.length === 3) {
+    white = [arguments[0], arguments[1], arguments[2]]
+  } else {
+    white = whiteBalance.t2rgb(arguments[0], arguments[1])
+  }
+
+  var l = 0.299 * white[0] + 0.587 * white[1] + 0.114 * white[2]
+  white[0] /= l
+  white[1] /= l
+  white[2] /= l
+
+  var lut = []
+  for (var x = 0; x < 256; x++) {
+    var r = utils.clamp(Math.round(x / white[0]), 0, 255)
+    var g = utils.clamp(Math.round(x / white[1]), 0, 255)
+    var b = utils.clamp(Math.round(x / white[2]), 0, 255)
+    lut[x] = [r, g, b, 255]
+  }
+
+  this.replaceColor(lut)
   return this
 }
 
@@ -348,6 +498,29 @@ Glimg.prototype.blend = function(node, options) {
   return this
 }
 
+Glimg.prototype.gaussianBlur = function(radius) {
+  if (radius <= 0) return this
+
+  for (var r = 2; r < 256; r *= 2) {
+    if (radius <= r) break
+  }
+
+  var gaussian = '#define radius ' + r + '.0\n\n' + shaders.core.gaussian
+
+  this.chain()
+  .useShader(gaussian)
+  .set('sigma', radius / 3)
+  .set('axis', [1, 0])
+  .run()
+  .useShader(gaussian)
+  .set('sigma', radius / 3)
+  .set('axis', [0, 1])
+  .run()
+  .done()
+
+  return this
+}
+
 Glimg.prototype.blur = function(radius) {
   if (radius <= 0) return this
   if (radius <= 4) return this.gaussianBlur(radius)
@@ -363,31 +536,6 @@ Glimg.prototype.blur = function(radius) {
   .gaussianBlur(r)
   .setSize(w, h)
   .copy()
-  .done()
-
-  return this
-}
-
-Glimg.prototype.gaussianBlur = function(radius) {
-  if (radius <= 0) return this
-
-  var gaussian = shaders.blur.gaussian256
-  for (var i = 2; i < 256; i *= 2) {
-    if (radius <= i) {
-      gaussian = shaders.blur['gaussian' + i]
-      break
-    }
-  }
-
-  this.chain()
-  .useShader(gaussian)
-  .set('sigma', radius / 3)
-  .set('axis', [1, 0])
-  .run()
-  .useShader(gaussian)
-  .set('sigma', radius / 3)
-  .set('axis', [0, 1])
-  .run()
   .done()
 
   return this
@@ -542,10 +690,10 @@ Glimg.prototype.setSource = function(unit, node) {
 }
 
 // getTarget()
-// returns current target image, null if target is the canvas
+// returns current target image, this glimg object if target unit is null
 //
 Glimg.prototype.getTarget = function() {
-  return this._textures[this.targetUnit]
+  return utils.isNothing(this.targetUnit) ? this : this._textures[this.targetUnit]
 }
 
 // setTarget(unit)
@@ -626,7 +774,7 @@ Glimg.prototype.useBuffer = function(array) {
 
 // private
 // useTexture(unit, node)
-// useTexture(unit, width, height)
+// useTexture(unit, data, width, height)
 // returns this object
 //
 // Create and cache a WebGL texture unit from node, or create a framebuffer 

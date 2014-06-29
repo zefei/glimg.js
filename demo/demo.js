@@ -18,14 +18,22 @@ angular.module('demo', ['colorpicker.module'])
   $scope.input = {
     blur: 0,
     rotate: 0,
-    gray: 0,
-    contrast: 0,
+    gray: 0.5,
+    contrast: 0.75,
     color1: 'rgb(127,127,127)',
     color2: 'rgb(127,127,127)'
   }
 
   $scope.clone = function() {
     $scope.test.load($scope.image)
+  }
+
+  $scope.convolve = function() {
+    $scope.image.convolve([
+      -2,-1,0,
+      -1,1,1,
+      0,1,2
+    ])
   }
 
   function parseColor(string) {
@@ -39,7 +47,8 @@ angular.module('demo', ['colorpicker.module'])
   $scope.onColorChange = function() {
     var highlight = parseColor($scope.input.color1)
     var shadow = parseColor($scope.input.color2)
-    $scope.image.splitTone(highlight, shadow)
+    //$scope.image.splitTone(highlight, shadow)
+    $scope.image.whiteBalance(highlight[0], highlight[1], highlight[2])
   }
 
   $scope.demo3 = new Image()
@@ -56,6 +65,10 @@ angular.module('demo', ['colorpicker.module'])
     $scope.image.crop(0.2, 0.2, 0.5, 0.7)
   }
 
+  $scope.wb = function() {
+    $scope.image.whiteBalance()
+  }
+
   $scope.copy = function() {
     $scope.image
     .blend($scope.demo3, {mode: 'normal', opacity: 1.0, mask: $scope.text})
@@ -66,8 +79,21 @@ angular.module('demo', ['colorpicker.module'])
   }
 
   $scope.onRotateChange = function() {
+    $scope.image.rotate($scope.input.rotate)
     /*
-    $scope.image.levels($scope.input.rotate, $scope.input.gray, $scope.input.contrast)
+    $scope.image.curves([
+      [0, 0],
+      [0.25, $scope.input.rotate],
+      [0.5, $scope.input.gray],
+      [0.75, $scope.input.contrast],
+      [1, 1]
+    ])
+    */
+  }
+
+  $scope.onGrayChange = function() {
+    /*
+    $scope.image.brightnessContrast($scope.input.gray, $scope.input.contrast)
     */
     $scope.image.curves([
       [0, 0],
@@ -78,12 +104,14 @@ angular.module('demo', ['colorpicker.module'])
     ])
   }
 
-  $scope.onGrayChange = function() {
-    $scope.image.brightnessContrast($scope.input.gray, $scope.input.contrast)
-  }
-
   $scope.onContrastChange = function() {
-    $scope.image.brightnessContrast($scope.input.gray, $scope.input.contrast)
+    $scope.image.curves([
+      [0, 0],
+      [0.25, $scope.input.rotate],
+      [0.5, $scope.input.gray],
+      [0.75, $scope.input.contrast],
+      [1, 1]
+    ])
   }
 
   var download = document.getElementById('download')

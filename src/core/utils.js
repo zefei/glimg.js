@@ -38,6 +38,29 @@ module.exports = {
     return value < min ? min : (value > max ? max : value)
   },
 
+  transpose: function(matrix) {
+    var m = this.flatten(matrix)
+    if (m.length === 4) {
+      return [
+        m[0], m[2],
+        m[1], m[3]
+      ]
+    } else if (m.length === 9) {
+      return [
+        m[0], m[3], m[6],
+        m[1], m[4], m[7],
+        m[2], m[5], m[8]
+      ]
+    } else {
+      return [
+        m[0], m[4], m[8], m[12],
+        m[1], m[5], m[9], m[13],
+        m[2], m[6], m[10], m[14],
+        m[3], m[7], m[11], m[15]
+      ]
+    }
+  },
+
   flatten: function(array) {
     return Array.prototype.concat.apply([], array)
   },

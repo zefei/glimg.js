@@ -7,7 +7,6 @@ uniform vec4 size;
 varying vec2 coord;
 varying vec2 maskCoord;
 const float pi = 3.14159265;
-const float radius = 256.0;
 
 void main() {
   // incremental gaussian (GPU Gems 3 pp. 877 - 889)
@@ -16,7 +15,7 @@ void main() {
   g.y = exp(-0.5 / (sigma * sigma));
   g.z = g.y * g.y;
 
-  vec4 sum = vec4(0.0, 0.0, 0.0, 0.0);
+  vec4 sum = vec4(0.0);
   float weight = 0.0;
 
   sum += texture2D(source, coord) * g.x;
